@@ -4,7 +4,7 @@ Jugad data is a library to download historical price-volume data from NSE in pan
 
 # Installation
 
-pip install git+https://github.com/jugaad-py/jugaad-data.git
+`pip install git+https://github.com/jugaad-py/jugaad-data.git`
 
 # Getting started
 ```python
