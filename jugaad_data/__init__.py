@@ -14,6 +14,8 @@ import pandas as pd
 
 from .util import  np_date, np_float, np_int, break_dates
 
+__version__ = 0.1
+
 class JugaadData:
     headers = {
         "Host": "www1.nseindia.com",
