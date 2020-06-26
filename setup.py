@@ -1,3 +1,4 @@
+import re
 import setuptools
 
 from jugaad_data import __version__
@@ -5,8 +6,9 @@ from jugaad_data import __version__
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open("requirements.txt", "r") as fh:
-    requirements = fh.read().split('\n')
+with open("src/flask/__init__.py", encoding="utf8") as f:
+    version = re.search(r'__version__ = "(.*?)"', f.read()).group(1)
+
 
 setuptools.setup(
     name="Jugaad Data", # Replace with your own username
