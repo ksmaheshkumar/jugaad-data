@@ -5,6 +5,9 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+with open("requirements.md", "r") as fh:
+    requirements = fh.read().splitlines()
+
 with open("jugaad_data/__init__.py", encoding="utf8") as f:
     version = re.search(r'__version__ = "(.*?)"', f.read()).group(1)
 
