@@ -1,5 +1,9 @@
-from io import StringIO
 import csv
+import os
+import calendar
+from io import StringIO
+from datetime import timedelta
+from concurrent.futures import ThreadPoolExecutor
 
 from urllib.parse import urljoin, urlencode
 
@@ -8,7 +12,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 
-from util import  np_date, np_float, np_int
+from util import  np_date, np_float, np_int, break_dates
 
 class JugaadData:
     headers = {
@@ -27,13 +31,19 @@ class JugaadData:
         "symbol_count": "/marketinfo/sym_map/symbolCount.jsp",
     }
     base_url = "https://www1.nseindia.com"
-
+    cache_dir = ".cache"
+    workers = 2
+    use_threads = True
     def __init__(self):
         
         self.s = Session()
         self.s.headers.update(self.headers)
         self.symbol_count_map = {}
         self.ssl_verify = True
+        try:
+            os.mkdir(self.cache_dir)
+        except FileExistsError:
+            pass
 
     def html_to_arr(self, html):
         bs = BeautifulSoup(html, features="lxml")
@@ -52,8 +62,7 @@ class JugaadData:
             new_arr.append(new_row)
         
         return pd.DataFrame(new_arr)
-
-
+             
     def _get(self, path, params):
         url = urljoin(self.base_url, path)
         return self.s.get(url, params=params, verify=self.ssl_verify)
@@ -72,27 +81,52 @@ class JugaadData:
                 'series': series,
                 'segmentLink': 3, 
         }
+        key = "{}_{}_{}_{}".format("stock", symbol, from_date.month, series)
+
+        if from_date.replace(day=1) == to_date.replace(day=1):
+            try:
+                df = self._cache_read(key)
+                return df[df['Date']>=np.datetime64(from_date)][df['Date']<=np.datetime64(to_date)]
+            except:
+                pass
+            
         self.r = self._get(path, params)
         arr = self.html_to_arr(self.r.text)
-        dtypes = [str,
-                str,
-                np_date,
-                np_float,
-                np_float,
-                np_float,
-                np_float,
-                np_float,
-                np_float,
-                np_float,
-                np_int,
-                np_float,
-                np_int,
-                np_int,
-                np_float]
+        dtypes = [  str, str, np_date, np_float,
+                    np_float, np_float, np_float,
+                    np_float, np_float, np_float,
+                    np_int, np_float, np_int,
+                    np_int, np_float]
+        headers = [ "Symbol", "Series", "Date", "Prev Close", "Open Price",	"High Price",
+                    "Low Price", "Last Price",	"Close Price", "VWAP", "Total Traded Quantity", "Turnover",
+                    "No. of Trades", "Deliverable Qty", "% Dly Qt to Traded Qty"]
         df = self.arr_to_df(arr, dtypes)
+        df.columns = headers
+        if (from_date.replace(day=1) == to_date.replace(day=1)) and (from_date.day == 1) and (to_date.day == calendar.monthrange(from_date.year, from_date.month)[1]):
+            self._cache_store(df, key)
         return df
 
-        
+    def stock_history(self, symbol, from_date, to_date, series='EQ'):
+        date_ranges = break_dates(from_date, to_date)
+        params = [(symbol, x[0], x[1], series) for x in date_ranges]
+        dfs = self._pool(self._stock_history, params)
+        return pd.concat(dfs, ignore_index=True)
+
+    def _pool(self, function, params):
+        if self.use_threads:
+            with ThreadPoolExecutor(max_workers=self.workers) as ex:
+                dfs = ex.map(function, *zip(*params))
+        else:
+            dfs = [self._stock_history(*param) for param in params]
+        return dfs
+    def _cache_store(self, df, key):
+        path = os.path.join(self.cache_dir, key + '.hdf')
+        df.to_hdf(path, key="data")
+    
+    def _cache_read(self, key):
+        path = os.path.join(self.cache_dir, key + '.hdf')
+        return pd.read_hdf(path, key="data")
+
     def _symbol_count(self, symbol):
         sym_count = self.symbol_count_map.get(symbol)
         if sym_count:
@@ -113,11 +147,16 @@ if __name__=="__main__":
     z = JugaadData()
     z.base_url = "https://23.54.86.108"
     z.ssl_verify = False
-    from_date = date(2020,1,1)
-    to_date = date(2020,1,30)
-
-    r = z._stock_history("SBIN", from_date, to_date)
-
+    # z.use_threads = False
+    symbol = "M&MFIN"
+    from_date = date(2019,1,3)
+    to_date = date(2020,1,10)
+    series = "EQ"
+    start_time = time.time()
+    r = z.stock_history(symbol, from_date, to_date)
+    end_time = time.time()
+    print(r)
+    print(end_time-start_time)
     # self.
     # s.headers.update(headers)
     # # url = "https://23.54.86.108/products/dynaContent/common/productsSymbolMapping.jsp?symbol=SBIN&segmentLink=3&symbolCount=1&series=EQ&dateRange=+&fromDate=02-03-2020&toDate=08-03-2020&dataType=PRICEVOLUME"
