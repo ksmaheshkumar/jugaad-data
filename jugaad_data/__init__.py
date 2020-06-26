@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 
-from util import  np_date, np_float, np_int, break_dates
+from .util import  np_date, np_float, np_int, break_dates
 
 class JugaadData:
     headers = {
@@ -208,29 +208,3 @@ class JugaadData:
 
 
 
-if __name__=="__main__":
-    import time
-    from datetime import date
-
-    z = JugaadData()
-    z.base_url = "https://23.54.86.108"
-    z.ssl_verify = False
-    # z.use_threads = False
-    symbol = "M&MFIN"
-    index = "NIFTY 50"
-    from_date = date(2019,1,3)
-    to_date = date(2020,1,10)
-    series = "EQ"
-    start_time = time.time()
-    # r = z.stock_history(symbol, from_date, to_date)
-    r = z.index_history(index, from_date, to_date)
-    end_time = time.time()
-    print(r)
-    print(end_time-start_time)
-    # self.
-    # s.headers.update(headers)
-    # # url = "https://23.54.86.108/products/dynaContent/common/productsSymbolMapping.jsp?symbol=SBIN&segmentLink=3&symbolCount=1&series=EQ&dateRange=+&fromDate=02-03-2020&toDate=08-03-2020&dataType=PRICEVOLUME"
-    # url = "https://23.54.86.108/products/content/equities/equities/eq_security.htm"
-    # #print('--')
-    # r = s.get(url, verify=False)
-    # print(r.text)
