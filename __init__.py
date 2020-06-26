@@ -112,6 +112,74 @@ class JugaadData:
         dfs = self._pool(self._stock_history, params)
         return pd.concat(dfs, ignore_index=True)
 
+    def _index_history(self, symbol, from_date, to_date):
+        path = "/products/dynaContent/equities/indices/historicalindices.jsp"
+        params = {
+            "indexType": symbol,
+            'fromDate': from_date.strftime('%d-%m-%Y'),
+            'toDate': to_date.strftime('%d-%m-%Y'),
+        }
+        key = "{}_{}_{}".format("index", symbol, from_date.month)
+
+        if from_date.replace(day=1) == to_date.replace(day=1):
+            try:
+                df = self._cache_read(key)
+                return df[df['Date']>=np.datetime64(from_date)][df['Date']<=np.datetime64(to_date)]
+            except:
+                pass
+        
+        self.r = self._get(path, params)
+        arr = self.html_to_arr(self.r.text)
+        dtypes = [  np_date, np_float, np_float,
+                    np_float, np_float, np_int,
+                    np_float]
+        headers = [ "Date", "Open",	"High",
+                    "Low", "Close", "Shares Traded",
+                    "Turnover (Rs. Cr)"]
+        df = self.arr_to_df(arr, dtypes)
+        df.columns = headers
+        if (from_date.replace(day=1) == to_date.replace(day=1)) and (from_date.day == 1) and (to_date.day == calendar.monthrange(from_date.year, from_date.month)[1]):
+            self._cache_store(df, key)
+        return df
+
+    def index_history(self, symbol, from_date, to_date, series='EQ'):
+        date_ranges = break_dates(from_date, to_date)
+        params = [(symbol, x[0], x[1]) for x in date_ranges]
+        dfs = self._pool(self._index_history, params)
+        return pd.concat(dfs, ignore_index=True)
+
+    def _fut_opt_df(self, symbol, from_date, to_date, instrument_type, expiry_date, option_type, strike_price):
+        sym_count = self._symbol_count(symbol)
+        path = "/products/dynaContent/common/productsSymbolMapping.jsp"
+        params = {
+                'instrumentType': instrument_type,
+                'symbol': symbol,
+                'expiryDate': expiry_date.strftime('%d-%m-%Y'),
+                'optionType': option_type,
+                'strikePrice': strike_price,
+                'dateRange': ' ',
+                'fromDate': from_date.strftime('%d-%m-%Y'),
+                'toDate': to_date.strftime('%d-%m-%Y'),
+                'segmentLink': 9, 
+                'symbolCount': " "
+        }
+        key = "{}_{}_{}_{}_{}_{}".format(instrument_type, symbol, expiry_date, option_type, strike_price,
+                                    from_date.month)
+
+        if from_date.replace(day=1) == to_date.replace(day=1):
+            try:
+                df = self._cache_read(key)
+                return df[df['Date']>=np.datetime64(from_date)][df['Date']<=np.datetime64(to_date)]
+            except:
+                pass
+            
+        self.r = self._get(path, params)
+        arr = self.html_to_arr(self.r.text)  
+        return arr
+    
+    def fno_dtypes_headers(self, instrument_type):
+        return 
+    
     def _pool(self, function, params):
         if self.use_threads:
             with ThreadPoolExecutor(max_workers=self.workers) as ex:
@@ -149,11 +217,13 @@ if __name__=="__main__":
     z.ssl_verify = False
     # z.use_threads = False
     symbol = "M&MFIN"
+    index = "NIFTY 50"
     from_date = date(2019,1,3)
     to_date = date(2020,1,10)
     series = "EQ"
     start_time = time.time()
-    r = z.stock_history(symbol, from_date, to_date)
+    # r = z.stock_history(symbol, from_date, to_date)
+    r = z.index_history(index, from_date, to_date)
     end_time = time.time()
     print(r)
     print(end_time-start_time)
