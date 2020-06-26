@@ -5,7 +5,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open("src/flask/__init__.py", encoding="utf8") as f:
+with open("jugaad_data/__init__.py", encoding="utf8") as f:
     version = re.search(r'__version__ = "(.*?)"', f.read()).group(1)
 
 
