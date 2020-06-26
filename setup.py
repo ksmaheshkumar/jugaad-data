@@ -5,6 +5,9 @@ from jugaad_data import __version__
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+with open("requirements.txt", "r") as fh:
+    requirements = fh.read().split('\n')
+
 setuptools.setup(
     name="Jugaad Data", # Replace with your own username
     version=__version__,
@@ -18,5 +21,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    install_requires=requirements,
     python_requires='>=3.6',
 )
