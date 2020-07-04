@@ -83,7 +83,7 @@ class JugaadData:
                 'series': series,
                 'segmentLink': 3, 
         }
-        key = "{}_{}_{}_{}".format("stock", symbol, from_date.month, series)
+        key = "{}_{}_{}_{}_{}".format("stock", symbol, from_date.year, from_date.month, series)
 
         if from_date.replace(day=1) == to_date.replace(day=1):
             try:
@@ -109,19 +109,28 @@ class JugaadData:
         return df
 
     def stock_history(self, symbol, from_date, to_date, series='EQ'):
+        """Return the historical prices of stock from from_date to to_date
+            
+        Keyword arguments:
+        symbol -- stock symbol as per NSE
+        from_date -- start date instance of datetime.date 
+        to_date -- end data instance of datetime.date
+        series -- refer [this](https://www.nseindia.com/market-data/legend-of-series)
+        """
         date_ranges = break_dates(from_date, to_date)
-        params = [(symbol, x[0], x[1], series) for x in date_ranges]
+        params = [(symbol, x[0], x[1]) for x in date_ranges]
         dfs = self._pool(self._stock_history, params)
         return pd.concat(dfs, ignore_index=True)
 
     def _index_history(self, symbol, from_date, to_date):
+        print(symbol, from_date, to_date)
         path = "/products/dynaContent/equities/indices/historicalindices.jsp"
         params = {
             "indexType": symbol,
             'fromDate': from_date.strftime('%d-%m-%Y'),
             'toDate': to_date.strftime('%d-%m-%Y'),
         }
-        key = "{}_{}_{}".format("index", symbol, from_date.month)
+        key = "{}_{}_{}_{}".format("index", symbol, from_date.year, from_date.month)
 
         if from_date.replace(day=1) == to_date.replace(day=1):
             try:
@@ -144,13 +153,61 @@ class JugaadData:
             self._cache_store(df, key)
         return df
 
-    def index_history(self, symbol, from_date, to_date, series='EQ'):
+    def index_history(self, symbol, from_date, to_date):
+        """Return the historical prices of index from from_date to to_date
+            
+        Keyword arguments:
+        symbol -- name of the index. [list of index](https://www1.nseindia.com/products/content/equities/indices/indices.htm) 
+        from_date -- start date instance of datetime.date 
+        to_date -- end data instance of datetime.date
+        series -- refer [this](https://www.nseindia.com/market-data/legend-of-series)
+        """
+
         date_ranges = break_dates(from_date, to_date)
         params = [(symbol, x[0], x[1]) for x in date_ranges]
         dfs = self._pool(self._index_history, params)
+        return
         return pd.concat(dfs, ignore_index=True)
-
-    def _fut_opt_df(self, symbol, from_date, to_date, instrument_type, expiry_date, option_type, strike_price):
+    
+    def fno_dtypes_headers(self, instrument_type):
+        if instrument_type in ["FUTSTK", "FUTIDX"]:
+            headers = ["Symbol", "Date", "Expiry", 
+                        "Open", "High", "Low", "Close",
+                        "LTP", "Settle Price", "No. of Contracts", 
+                        "Turnover in Lacs", "Open Int", 
+                        "Chain in OI", "Underlying Value"]
+            dtypes = [str, np_date, np_date, 
+                        np_float, np_float, np_float, np_float,
+                        np_float, np_float, np_int,
+                        np_float, np_int,
+                        np_int, np_float]
+        if instrument_type in ["OPTSTX", "OPTIDX"]:
+            headers = ["Symbol", "Date", "Expiry", "Option type", "Strike Price",
+                        "Open", "High", "Low", "Close",
+                        "LTP", "Settle Price", "No. of Contracts", 
+                        "Turnover in Lacs", "Open Int", 
+                        "Chain in OI", "Underlying Value"]
+            dtypes = [str, np_date, np_date, str, np_float,  
+                        np_float, np_float, np_float, np_float,
+                        np_float, np_float, np_int,
+                        np_float, np_int,
+                        np_int, np_float]
+        return dtypes, headers
+   
+    def _fut_opt_history(self, symbol, from_date, to_date, instrument_type, expiry_date,
+                    option_type=None, strike_price=None):
+        """Return the historical prices of F&O instruments from from_date to to_date 
+        where from_date to to_date is within 90 days
+            
+        Keyword arguments:
+        symbol -- name of the index. [list of index](https://www1.nseindia.com/products/content/equities/indices/indices.htm) 
+        from_date -- start date instance of datetime.date 
+        to_date -- end data instance of datetime.date
+        instrument_type -- one of FUTSTK, OPTSTK, FUTIDX, OPTIDX
+        expiry_date -- date of expiry instance of datetime.date
+        option_type -- CE or PE, if instrument_type is OPTSTK or OPTIDX 
+        strike_prce -- Strike price of option contract, if instrument_type is OPTSTK or OPTIDX
+        """
         sym_count = self._symbol_count(symbol)
         path = "/products/dynaContent/common/productsSymbolMapping.jsp"
         params = {
@@ -165,7 +222,7 @@ class JugaadData:
                 'segmentLink': 9, 
                 'symbolCount': " "
         }
-        key = "{}_{}_{}_{}_{}_{}".format(instrument_type, symbol, expiry_date, option_type, strike_price,
+        key = "{}_{}_{}_{}_{}_{}_{}".format(instrument_type, symbol, expiry_date, option_type, strike_price, from_date.year,
                                     from_date.month)
 
         if from_date.replace(day=1) == to_date.replace(day=1):
@@ -177,17 +234,27 @@ class JugaadData:
             
         self.r = self._get(path, params)
         arr = self.html_to_arr(self.r.text)  
-        return arr
+        dtypes, headers = self.fno_dtypes_headers(instrument_type)
+        df = self.arr_to_df(arr, dtypes)
+        df.columns = headers
+        if (from_date.replace(day=1) == to_date.replace(day=1)) and (from_date.day == 1) and (to_date == expiry_date):
+            self._cache_store(df, key)
+        return df
     
-    def fno_dtypes_headers(self, instrument_type):
-        return 
-    
+   
+    def fut_opt_history(self, symbol, from_date, to_date, instrument_type, expiry_date,
+                    option_type=None, strike_price=None):
+        date_ranges = break_dates(from_date, to_date)
+        params = [(symbol, x[0], x[1], instrument_type, expiry_date, option_type, strike_price) for x in date_ranges]
+        dfs = self._pool(self._fut_opt_history, params)
+        return pd.concat(dfs, ignore_index=True)
+
     def _pool(self, function, params):
         if self.use_threads:
             with ThreadPoolExecutor(max_workers=self.workers) as ex:
                 dfs = ex.map(function, *zip(*params))
         else:
-            dfs = [self._stock_history(*param) for param in params]
+            dfs = [function(*param) for param in params]
         return dfs
     def _cache_store(self, df, key):
         path = os.path.join(self.cache_dir, key + '.hdf')
