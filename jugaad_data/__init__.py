@@ -16,7 +16,7 @@ from .util import  np_date, np_float, np_int, break_dates
 
 __version__ = "0.1"
 
-class JugaadData:
+class NSEHistory:
     headers = {
         "Host": "www1.nseindia.com",
         "Referer": "https://www1.nseindia.com/products/content/equities/equities/eq_security.htm",
@@ -166,7 +166,6 @@ class JugaadData:
         date_ranges = break_dates(from_date, to_date)
         params = [(symbol, x[0], x[1]) for x in date_ranges]
         dfs = self._pool(self._index_history, params)
-        return
         return pd.concat(dfs, ignore_index=True)
     
     def fno_dtypes_headers(self, instrument_type):
@@ -181,7 +180,7 @@ class JugaadData:
                         np_float, np_float, np_int,
                         np_float, np_int,
                         np_int, np_float]
-        if instrument_type in ["OPTSTX", "OPTIDX"]:
+        if instrument_type in ["OPTSTK", "OPTIDX"]:
             headers = ["Symbol", "Date", "Expiry", "Option type", "Strike Price",
                         "Open", "High", "Low", "Close",
                         "LTP", "Settle Price", "No. of Contracts", 
@@ -254,7 +253,15 @@ class JugaadData:
             with ThreadPoolExecutor(max_workers=self.workers) as ex:
                 dfs = ex.map(function, *zip(*params))
         else:
-            dfs = [function(*param) for param in params]
+            dfs = []
+            for param in params:
+                try:
+                    r = function(*param)
+                except:
+                    print(param)
+                    raise
+                dfs.append(r)
+            #dfs = [function(*param) for param in params]
         return dfs
     def _cache_store(self, df, key):
         path = os.path.join(self.cache_dir, key + '.hdf')
@@ -276,4 +283,4 @@ class JugaadData:
 
 
 
-
+JugaadData = NSEHistory
