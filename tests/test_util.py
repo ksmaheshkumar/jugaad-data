@@ -21,3 +21,4 @@ class TestUtil(unittest.TestCase):
     def test_np_date_nat(self):
         d = ut.np_date("32-Dec-2019")
         self.assertTrue(np.isnat(d))
+

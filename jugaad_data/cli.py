@@ -39,6 +39,18 @@ def stock(symbol, from_ ,to, output, host, warnings):
     df = n.stock_history(symbol, from_date, to_date)
     click.echo(df.head())
 
+@cli.command()
+@click.argument("symbol")
+@click.option('--from', '-f', 'from_', help="yyyy-mm-dd", required=True)
+@click.option('--to', '-t', help="yyyy-mm-dd", required=True)
+@click.option('--instru', '-i', help="Instrument type - FUTIDX, OPTIDX, FUTSTK, OPTSTK", required=True)
+@click.option('--expiry', '-e', help="yyyy-mm-dd", required=True)
+@click.option("--output", default="", help='output file name')
+@click.option('--host', '-h', default="", help='host url eg. http://www1.nseindia.com')
+@click.option('--warnings/--no-warnings', default=True, help='suppress SSL warnings')
+def fno(symbol, from_, to, output, host, warnings):
+    pass
 
 if __name__=="__main__":
     cli()
+

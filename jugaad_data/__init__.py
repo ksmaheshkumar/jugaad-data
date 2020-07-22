@@ -236,8 +236,7 @@ class NSEHistory:
         dtypes, headers = self.fno_dtypes_headers(instrument_type)
         df = self.arr_to_df(arr, dtypes)
         df.columns = headers
-        if (from_date.replace(day=1) == to_date.replace(day=1)) and (from_date.day == 1) and (to_date == expiry_date):
-            self._cache_store(df, key)
+        self._cache_store(df, key)
         return df
     
    
@@ -281,6 +280,8 @@ class NSEHistory:
         self.symbol_count_map[symbol] = self.r.text.lstrip().rstrip()
         return self.symbol_count_map[symbol]
 
-
-
 JugaadData = NSEHistory
+
+
+
+
