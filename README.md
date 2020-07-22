@@ -2,6 +2,8 @@
 
 Jugad data is a library to download historical price-volume data from NSE in pandas dataframe.
 
+[![Build Status](https://travis-ci.org/jugaad-py/jugaad-data.svg?branch=master)](https://travis-ci.org/jugaad-py/jugaad-data)
+
 # Installation
 
 `pip install git+https://github.com/jugaad-py/jugaad-data.git`
