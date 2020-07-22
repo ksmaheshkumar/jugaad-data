@@ -62,9 +62,10 @@ class NSEHistory:
             for cell, dtype in zip(row, dtypes):
                 new_row.append(dtype(cell))
             new_arr.append(new_row)
-        
+    
         return pd.DataFrame(new_arr)
-             
+        
+
     def _get(self, path, params):
         url = urljoin(self.base_url, path)
         return self.s.get(url, params=params, verify=self.ssl_verify)
